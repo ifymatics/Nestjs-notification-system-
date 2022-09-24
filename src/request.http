@@ -1,0 +1,13 @@
+### Post notifications to user or company
+POST http://localhost:3000/notifications
+Content-Type: application/json
+
+{
+   "userId":"90",
+  
+  
+  "notificationType":"happy-birthday"
+}
+
+### Get User or company stored notifications
+GET http://localhost:3000/notifications/90
