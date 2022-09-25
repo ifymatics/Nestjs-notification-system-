@@ -1,13 +1,22 @@
 ### Post notifications to user or company
+# The notification property in the body is optional
 POST http://localhost:3000/notifications
 Content-Type: application/json
 
+# 1 .notification to a user with userId of 6
+# {
+#    "userId":"6",
+  
+#    "notification":{"subject":"happy birthday","content":"We wish you a happy birthday"},
+#   "notificationType":"happy-birthday"
+# }
+
+# 2.notification to a company with companyId of 3
 {
-   "userId":"90",
+   "companyId":"3",
   
-  
+   "notification":{"subject":"happy birthday","content":"We wish you a happy birthday"},
   "notificationType":"happy-birthday"
 }
-
 ### Get User or company stored notifications
-GET http://localhost:3000/notifications/90
+GET http://localhost:3000/notifications/6
