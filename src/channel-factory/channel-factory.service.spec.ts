@@ -8,41 +8,58 @@ import { Unsubscription } from './../schemas/unsubscription.schema';
 
 import { EmailChannelService } from 'src/email-channel/email-channel.service';
 import { ResponseData } from 'src/notifications/interfaces/responseData.interface';
-import { NotificationData } from 'src/notifications/interfaces/notification.interface';
+import { NotificationData } from './../notifications/interfaces/notification.interface';
 import { notificationListTypes } from 'src/mock-data/notification-list';
+import { receiverIdType } from './../notifications/interfaces/notificationReceiverId';
 
 describe('ChannelFactoryService', () => {
   let channelFactoryService: ChannelFactoryService;
-  let channelsService: ChannelsService;
-  let uiChannelService: UiChannelService;
-  let emailChannelService: EmailChannelService
-  let unsubscriptionModel: any;
-  let notificationTypeModel: any;
-  let userNotificationsModel: any;
-  beforeEach(async () => {
-    unsubscriptionModel = new Unsubscription()
-    channelsService = new ChannelsService(unsubscriptionModel, userNotificationsModel, notificationTypeModel);
-    uiChannelService = new UiChannelService(channelsService);
-    channelFactoryService = new ChannelFactoryService(emailChannelService, uiChannelService, channelsService,)
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [ChannelFactoryService],
+  let uiChannelService: Partial<UiChannelService> = {
+    send: async function ({ notificationType, userId, companyId, notification }: NotificationData) {
+      const content = notification?.content;
+      let userUnsubscribed: boolean | string;
+      let companyUnsubscribed: boolean | string;
+      const isUnsubscribed = jest.fn().mockImplementation((userId, userType: string, status: boolean) => {
+        if (status) return Promise.resolve(true)
+        else return Promise.resolve(false)
+      });
+      const findUser = jest.fn().mockImplementation((userId, userType: string) => {
 
-      exports: [ChannelFactoryService]
-    }).overrideProvider(ChannelFactoryService).useValue(channelFactoryService).compile();
+        if (userId) return Promise.resolve({ receiverId: userId })
+        else return Promise.resolve({ receiverId: "" })
+      })
+      const findCompany = jest.fn().mockImplementation((userId, userType: string,) => {
+        if (userId) return Promise.resolve({ receiverId: userId })
+        else return Promise.resolve({ receiverId: "" })
+      })
+      const saveNotification = jest.fn().mockImplementation((userId, userType: string, status: boolean) => {
+        if (status) return Promise.resolve(true)
+        else return Promise.resolve(false)
+      })
+      if (!notificationType || (!userId && !companyId)) return { message: "Error occurred, required fields cannot be empty!", channel: 'UIChannel', notificationType, statusCode: 400 };
 
-    channelFactoryService = module.get<ChannelFactoryService>(ChannelFactoryService);
-  });
+      if (userId) {
+        userUnsubscribed = await isUnsubscribed(userId, receiverIdType.USER);
+      } else {
+        companyUnsubscribed = await isUnsubscribed(companyId, receiverIdType.COMPANY);
+
+      }
+
+
+      if (companyUnsubscribed || companyUnsubscribed) return { message: "Receiver has unsubscribed", channel: 'UIChannel', notificationType, statusCode: 400 };
+      if (typeof companyUnsubscribed === 'string') return { message: "Error occurred, notification not sent through UIChannel!", channel: 'UIChannel', notificationType, statusCode: 500 };
+      const receiverDatail = userId ? await findUser(userId) : await findCompany(companyId)
+      if (!receiverDatail.receiverId) return { message: "Receiver not found!", channel: 'UIChannel', notificationType, statusCode: 404 };
+      const storeNotification = await saveNotification(notificationType, receiverDatail, "UIChannel", content);
+
+      if (!storeNotification) return { message: "Notification could not be sent,try later", channel: 'UIChannel', notificationType, statusCode: 500 }
+      return { message: "Notification Sent successfully", channel: 'UIChannel', notificationType, statusCode: 200 }
+
+    }
+  };
+
   const mockChannelFactoryService: Partial<ChannelFactoryService> = {
-    // delegateChannel: async function (data: NotificationData): Promise<ResponseData | (ResponseData | ResponseData[])[] | ResponseData> {
-    //   let channels: string[] = [];
-    //   channels = await await this.getChannelType(data)
-    //   if (!channels.length) return { message: "The channel for this notification not found!", channel: "", notificationType: data.notificationType, statusCode: 400 }
-    //   const responseData = await uiChannelService.send(data);
-    //   if (typeof responseData === "string") return { message: "Error occurred, notification not sent!", channel: 'EmailChannel', notificationType: data.notificationType, statusCode: 500 }
-    //   return responseData
 
-
-    // },
     delegateChannel: jest.fn().mockImplementation(async function (data: NotificationData) {
       // this.notifcationsDta = data?data:{};
       let channels: string[];
@@ -66,6 +83,17 @@ describe('ChannelFactoryService', () => {
 
     }
   }
+
+  beforeEach(async () => {
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [ChannelFactoryService],
+
+      exports: [ChannelFactoryService]
+    }).overrideProvider(ChannelFactoryService).useValue(mockChannelFactoryService).compile();
+
+    channelFactoryService = module.get<ChannelFactoryService>(ChannelFactoryService);
+  });
 
   it('should be defined', () => {
     expect(channelFactoryService).toBeDefined();
