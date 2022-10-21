@@ -5,30 +5,33 @@ import { NotificationsController } from './notifications.controller';
 import { EmailChannelService } from './../email-channel/email-channel.service';
 import { UiChannelService } from './../ui-channel/ui-channel.service';
 import { } from "./../channels/channels.service"
-import { Unsubscription } from 'src/schemas/unsubscription.schema';
+
 import { ResponseData } from './interfaces/responseData.interface';
 
 describe('NotificationsController', () => {
   let controller: NotificationsController;
-  let channelService: ChannelsService;
-  let channelFactoryService: ChannelFactoryService;
-  let emailChannelService: EmailChannelService;
+  let mockChannelService: Partial<ChannelsService> = {};
+  let channelFactoryService: Partial<ChannelFactoryService> = {};
+  let emailChannelService: Partial<EmailChannelService> = {};
   let uiChannelService: UiChannelService
 
 
 
   beforeEach(async () => {
-    channelFactoryService = new ChannelFactoryService(emailChannelService, uiChannelService, channelService);
+    // channelFactoryService = new ChannelFactoryService(emailChannelService, uiChannelService, channelService);
 
 
-    controller = new NotificationsController(channelService, channelFactoryService);
-    // const module: TestingModule = await Test.createTestingModule({
-    //   controllers: [NotificationsController],
+    // controller = new NotificationsController(channelService, channelFactoryService);
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [NotificationsController],
 
-    //   providers: [ChannelFactoryService, ChannelsService]
-    // }).overrideProvider([[ChannelFactoryService, ChannelsService]]).useValue([mockChannelFactoryService, mockChannelsService]).compile();
+      providers: [
+        { provide: ChannelsService, useValue: mockChannelService },
+        { provide: ChannelFactoryService, useValue: channelFactoryService },
+        { provide: EmailChannelService, useValue: emailChannelService }]
+    }).compile();
 
-    // controller = module.get<NotificationsController>(NotificationsController);
+    controller = module.get<NotificationsController>(NotificationsController);
 
   });
 
@@ -65,6 +68,7 @@ describe('NotificationsController', () => {
         "userId": "6",
         "companyId": "3",
         "notification": { "subject": "happy birthday", "content": "We wish you a happy birthday" },
+        "notificationType": "happy-birthday"
 
       }
       jest.spyOn(controller, 'sendNotifications').mockImplementation((): Promise<ResponseData> => Promise.resolve(result));
@@ -72,4 +76,16 @@ describe('NotificationsController', () => {
       expect(await controller.sendNotifications(notificationData)).toBe(result);
     });
   });
+  describe("getUserNotifications", () => {
+    it("gets all stored notifications of the receiver's id", async () => {
+      const userId = "6";
+      const result = [
+        { isViewed: false, channel: "EmailChannel", receiverId: "6" }
+      ]
+      jest.spyOn(controller, 'getUserNotifications').mockImplementation((): Promise<{ isViewed: boolean, channel: string, receiverId: string }[]> => Promise.resolve(result));
+
+      expect(await controller.getUserNotifications(userId)).toBe(result);
+    });
+
+  })
 });

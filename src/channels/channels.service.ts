@@ -18,7 +18,7 @@ export class ChannelsService {
     ) { }
     async isUnsubscribed(id: string, channelType: string, valuse?: boolean): Promise<boolean | string> {
         try {
-            const receiverIsUnsubscribed = await this.unSuscriptionModel.findOne({ subscriberId: id, unsubscribed: true, channelName: channelType }).exec()
+            const receiverIsUnsubscribed = await this.unSuscriptionModel.findOne({ subscriberId: id, unsubscribed: true, channelName: channelType })
             if (receiverIsUnsubscribed) return true
 
         } catch (error) {
@@ -31,9 +31,10 @@ export class ChannelsService {
         let notifications = [];
         try {
             notifications = await this.userNotificationsModel.find({ receiverId: userId })
+
         } catch (error) {
             console.log('UI notification was not saved due to error!')
-            return notifications
+            // return notifications
         }
         return notifications
     }
@@ -64,13 +65,13 @@ export class ChannelsService {
     }
 
     async saveNotification(notificationType: string, receiverDetail: ReceiverDetail, channel: string, content?: string,) {
-
+        if (!notificationType) return false
         try {
             await this.userNotificationsModel.create({ receiverId: receiverDetail.receiverId, notificationType, notification: { content: content }, channelName: channel })
 
         } catch (error) {
             // console.log(error.message)
-            //return false
+            return false
         }
 
         return true

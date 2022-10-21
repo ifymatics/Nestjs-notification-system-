@@ -27,7 +27,7 @@ export class EmailChannelService {
 
         if (userUnsubscribed || companyUnsubscribed) return { message: "Receiver has unsubscribed", channel: 'EmailChannel', notificationType, statusCode: 400 };
 
-        if (typeof companyUnsubscribed === 'string') return { message: "Error occurred, notification not sent!", channel: 'EmailChannel', notificationType, statusCode: 500 };
+        if (typeof companyUnsubscribed === 'string' || typeof userUnsubscribed === 'string') return { message: "Error occurred, notification not sent!", channel: 'EmailChannel', notificationType, statusCode: 500 };
         const receiverDatail = userId ? await this.notificationsService.findUser(userId) : await this.notificationsService.findCompany(companyId)
 
         if (!receiverDatail.receiverId) return { message: "Receiver not found!", channel: 'UIChannel', notificationType, statusCode: 404 };//const storeNotification = await this.notificationsService.saveNotification(content, receiverDatail);
@@ -37,10 +37,11 @@ export class EmailChannelService {
 
     }
     public emailTemplate(receiver: ReceiverDetail, notification: Notification, notificationType: string): string {
-        if (!receiver) return ""
-        if (notification)
-            return `${notification?.subject} ${notification?.subject?.toLowerCase()?.includes('happy birthday') ? receiver.receiverName : ''} 
-        \n${notification?.content}`
+        if (!receiver.receiverId) return ""
+        if (receiver.receiverId && receiver.receiverName && notificationType !== "happy-birthday") return receiver.receiverName
+        // if (notification)
+        //     return `${notification?.subject} ${notification?.subject?.toLowerCase()?.includes('happy birthday') ? receiver.receiverName : ''} 
+        // \n${notification?.content}`
         return notificationType === "happy-birthday" ? `${notificationType.split("-").join(" ")} ${receiver.receiverName}` : notificationType.split("-").join(" ")
     }
 }

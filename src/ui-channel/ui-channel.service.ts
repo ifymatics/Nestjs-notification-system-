@@ -25,7 +25,7 @@ export class UiChannelService {
 
 
         if (companyUnsubscribed || companyUnsubscribed) return { message: "Receiver has unsubscribed", channel: 'UIChannel', notificationType, statusCode: 400 };
-        if (typeof companyUnsubscribed === 'string') return { message: "Error occurred, notification not sent through UIChannel!", channel: 'UIChannel', notificationType, statusCode: 500 };
+        if (typeof companyUnsubscribed === 'string' || typeof userUnsubscribed === 'string') return { message: "Error occurred, notification not sent through UIChannel!", channel: 'UIChannel', notificationType, statusCode: 500 };
         const receiverDatail = userId ? await this.notificationsService.findUser(userId) : await this.notificationsService.findCompany(companyId)
         if (!receiverDatail.receiverId) return { message: "Receiver not found!", channel: 'UIChannel', notificationType, statusCode: 404 };
         const storeNotification = await this.notificationsService.saveNotification(notificationType, receiverDatail, "UIChannel", content);

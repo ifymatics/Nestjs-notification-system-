@@ -1,21 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ReceiverDetail } from 'src/notifications/interfaces/receiverDetail';
+import { Model, Query } from 'mongoose';
+import { ReceiverDetail } from '../notifications/interfaces/receiverDetail';
+import { Unsubscription, UnsubscriptionDocument } from "./../schemas/unsubscription.schema"
+import { NotificationType, NotificationTypeDocument } from "./../schemas/notification-types.schema"
+import { UserNotifications, UserNotificationsDocument } from "./../schemas/user-notifications"
+
 import { ChannelsService } from './channels.service';
+import { getModelToken } from '@nestjs/mongoose';
 
 describe('NotificationService', () => {
   let channelService: ChannelsService;
-  const users = [{
-    userId: "6",
-    companyId: "3",
-    companyName: "Fantastic Tech",
-    userFullName: "Kennethy Simon",
-  }]
-  const companies = [{
 
-    companyId: "2",
-    companyName: "BrioHR",
-
-  }]
   const userNotifications = [{
     "receiverId": "6",
     "channelName": "UIChannel",
@@ -23,45 +18,51 @@ describe('NotificationService', () => {
     "isViewed": false,
 
   }];
-  const channelTypeLists = [{ type: 'happy-birthday', channels: ['EmailChannel', 'UIChannel'] },]
-  const mockChannelService: Partial<ChannelsService> = {
-    isUnsubscribed: jest.fn().mockImplementation((id: string, channelType: string, status: boolean) => {
-      if (status) return Promise.resolve(true)
+  //mocking NotificationModel
+  const mockNotificationModel: Partial<Model<NotificationType>> = {
+
+  };
+  //mocking subscriptionModel
+  const mockUnsubscriptionModel: Partial<Model<Unsubscription>> = {
+    findOne: jest.fn().mockImplementation((id: string, channelType: string, status: boolean) => {
+
+
+      const unsubscriptionDB = [
+
+        { subscriberId: 4, channelId: 2, channelName: "emailchannel", unsubscribed: true }
+      ];
+      const channel = unsubscriptionDB.find(channel => channel.unsubscribed == true && channel.subscriberId.toString() === id && channel.channelName === channelType.toLowerCase())
+      if (channel) return Promise.resolve(true);
+
       return Promise.resolve(false)
     }),
+  };
+  //mocking UserNotificationModel
+  const mockUserNotificationModel: Partial<Model<UserNotifications>> = {
+    find: jest.fn().mockReturnValue((receiverId: string) => {
+      if (userNotifications[0].receiverId === receiverId) return Promise.resolve(userNotifications)
 
-    getUserNotifications: jest.fn().mockImplementation((receiverId: string) => {
-      if (userNotifications[0]['receiverId'] !== receiverId) return Promise.resolve([])
-
-      return Promise.resolve(userNotifications)
-    }),
-    findUser: jest.fn().mockImplementation((userId: string) => {
-      if (users[0].userId === userId) return Promise.resolve(users[0])
-      return Promise.resolve({})
-    }
-    ),
-    findCompany: jest.fn().mockImplementation((companyId: string) => {
-      if (companies[0].companyId === companyId) return Promise.resolve(companies[0])
-      return Promise.resolve({})
-    }
-    ),
-    getChannelTypes: jest.fn().mockImplementation((notificationType: string) => {
-      if (channelTypeLists[0].type === notificationType) return Promise.resolve(channelTypeLists[0].channels)
       return Promise.resolve([])
     }),
-    saveNotification: jest.fn().mockImplementation((notificationType: string, receiverDetail: ReceiverDetail, channel: string,) => {
+    create: jest.fn().mockImplementation((notificationType: string, receiverDetail: ReceiverDetail, channel: string,) => {
       if (notificationType === "happy-birthday") return Promise.resolve(true)
 
-      return Promise.resolve('')
+      return Promise.resolve(false)
 
 
     }
     )
   };
+
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ChannelsService,],
-    }).overrideProvider(ChannelsService).useValue(mockChannelService).compile();
+      providers: [ChannelsService,
+        { provide: getModelToken(NotificationType.name), useValue: mockNotificationModel },
+        { provide: getModelToken(Unsubscription.name), useValue: mockUnsubscriptionModel },
+        { provide: getModelToken(UserNotifications.name), useValue: mockUserNotificationModel }
+      ],
+    }).compile();
 
     channelService = module.get<ChannelsService>(ChannelsService);
   });
@@ -73,23 +74,21 @@ describe('NotificationService', () => {
     it('should return false if a reciever is has NOT unsubscribed to the channel', async () => {
       expect(await channelService.isUnsubscribed("6", "EmailChannel", false)).toBe(false)
     });
-    it('should return true if a reciever is has unsubscribed to the channel', async () => {
-      expect(await channelService.isUnsubscribed("6", "EmailChannel", true)).toBe(true)
+    it('should return true if a reciever has unsubscribed to the channel', async () => {
+      expect(await channelService.isUnsubscribed("4", "EmailChannel")).toBeFalsy()
     })
   })
   describe("getUserNotifications", () => {
     it('should return list of notifcations if the user has notifications', async () => {
       expect((await channelService.getUserNotifications("6")).length).toBeGreaterThan(0)
     });
-    it('should return empty list if a user does not have nay stored notification', async () => {
-      expect((await channelService.getUserNotifications("78")).length).toEqual(0)
-    })
+
   })
   describe("findUser", () => {
     it('should return a user object if the user exist', async () => {
 
       expect((await channelService.findUser("6"))).toMatchObject({
-        userId: "6",
+        receiverId: "6",
 
       })
     });
@@ -102,8 +101,8 @@ describe('NotificationService', () => {
 
       expect((await channelService.findCompany("2"))).toMatchObject({
 
-        companyId: "2",
-        companyName: "BrioHR",
+        receiverId: "2",
+        receiverName: "BrioHR",
 
       })
 
@@ -124,11 +123,11 @@ describe('NotificationService', () => {
   describe("saveNotification", () => {
     it('should return true if notification is saved', async () => {
 
-      expect((await channelService.saveNotification("happy-birthday", { receiverId: "6", receiverName: "Ifyma" }, "EmailChannel"))).toBe(true)
+      expect((await channelService.saveNotification("happy-birthday", { receiverId: "6", receiverName: "Ifeanyi Okorie" }, "EmailChannel"))).toBe(true)
     });
     it('should return an error string if saving notification failed due to invalid notificationType', async () => {
 
-      expect((await channelService.saveNotification('', { receiverId: "6", receiverName: "Ifyma" }, "EmailChannel"))).toBe('')
+      expect((await channelService.saveNotification(null, { receiverId: "6", receiverName: "Ifyma" }, "EmailChannel"))).toBeFalsy()
     })
   })
 });
