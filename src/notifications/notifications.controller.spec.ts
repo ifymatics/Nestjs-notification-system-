@@ -7,28 +7,39 @@ import { UiChannelService } from './../ui-channel/ui-channel.service';
 import { } from "./../channels/channels.service"
 
 import { ResponseData } from './interfaces/responseData.interface';
+import { NotificationData } from './interfaces/notification.interface';
 
 describe('NotificationsController', () => {
+  const notificationResult = {
+    "message": "Notification Sent successfully",
+    "channel": "UIChannel",
+    "notificationType": "happy-birthday",
+    "statusCode": 200
+  }
   let controller: NotificationsController;
-  let mockChannelService: Partial<ChannelsService> = {};
-  let channelFactoryService: Partial<ChannelFactoryService> = {};
-  let emailChannelService: Partial<EmailChannelService> = {};
-  let uiChannelService: UiChannelService
-
-
+  let mockChannelService: Partial<ChannelsService> = {
+    getUserNotifications: async (userId: string): Promise<{ isViewed: boolean, channel: string, receiverId: string }[]> => {
+      return Promise.resolve([
+        { isViewed: false, channel: "EmailChannel", receiverId: "6" }
+      ])
+    }
+  };
+  let mockChannelFactoryService: Partial<ChannelFactoryService> = {
+    delegateChannel: async (data: NotificationData) => {
+      return Promise.resolve(notificationResult)
+    },
+  };
+  let mockEmailChannelService: Partial<EmailChannelService> = {};
 
   beforeEach(async () => {
-    // channelFactoryService = new ChannelFactoryService(emailChannelService, uiChannelService, channelService);
 
-
-    // controller = new NotificationsController(channelService, channelFactoryService);
     const module: TestingModule = await Test.createTestingModule({
       controllers: [NotificationsController],
 
       providers: [
         { provide: ChannelsService, useValue: mockChannelService },
-        { provide: ChannelFactoryService, useValue: channelFactoryService },
-        { provide: EmailChannelService, useValue: emailChannelService }]
+        { provide: ChannelFactoryService, useValue: mockChannelFactoryService },
+        { provide: EmailChannelService, useValue: mockEmailChannelService }]
     }).compile();
 
     controller = module.get<NotificationsController>(NotificationsController);
@@ -52,9 +63,10 @@ describe('NotificationsController', () => {
         "notification": { "subject": "happy birthday", "content": "We wish you a happy birthday" },
         "notificationType": "happy-birthday"
       }
-      jest.spyOn(controller, 'sendNotifications').mockImplementation((): Promise<ResponseData> => Promise.resolve(result));
+      const results = await mockChannelFactoryService.delegateChannel(notificationData)
+      //jest.spyOn(controller, 'sendNotifications').mockImplementation((): Promise<ResponseData> => Promise.resolve(result));
 
-      expect(await controller.sendNotifications(notificationData)).toBe(result);
+      expect(await controller.sendNotifications(notificationData)).toBe(results);
     });
 
     it('should return an object that contains statusCode 500 when  an object with all the required field is passed', async () => {
@@ -71,9 +83,9 @@ describe('NotificationsController', () => {
         "notificationType": "happy-birthday"
 
       }
-      jest.spyOn(controller, 'sendNotifications').mockImplementation((): Promise<ResponseData> => Promise.resolve(result));
-
-      expect(await controller.sendNotifications(notificationData)).toBe(result);
+      //jest.spyOn(controller, 'sendNotifications').mockImplementation((): Promise<ResponseData> => Promise.resolve(result));
+      const results = await mockChannelFactoryService.delegateChannel(notificationData)
+      expect(await controller.sendNotifications(notificationData)).toBe(results);
     });
   });
   describe("getUserNotifications", () => {
@@ -82,6 +94,7 @@ describe('NotificationsController', () => {
       const result = [
         { isViewed: false, channel: "EmailChannel", receiverId: "6" }
       ]
+
       jest.spyOn(controller, 'getUserNotifications').mockImplementation((): Promise<{ isViewed: boolean, channel: string, receiverId: string }[]> => Promise.resolve(result));
 
       expect(await controller.getUserNotifications(userId)).toBe(result);
