@@ -4,9 +4,10 @@ import { ChannelsService } from '../channels/channels.service';
 import { NotificationData } from "./../notifications/interfaces/notification.interface"
 import { receiverIdType } from "./../notifications/interfaces/notificationReceiverId"
 import { ReceiverDetail } from "./../notifications/interfaces/receiverDetail"
+import { ChannelBase } from "./../ChannelBase.interface"
 
 @Injectable()
-export class UiChannelService {
+export class UiChannelService implements ChannelBase {
     constructor(private notificationsService: ChannelsService) {
 
     }

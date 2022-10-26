@@ -13,7 +13,7 @@ Content-Type: application/json
 
 # 2.notification to a company with companyId of 3
 {
-   "companyId":"3",
+   "userId":"6",
   
    "notification":{"subject":"happy birthday","content":"We wish you a happy birthday"},
   "notificationType":"happy-birthday"

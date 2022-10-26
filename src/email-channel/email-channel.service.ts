@@ -5,9 +5,10 @@ import { NotificationData } from './../notifications/interfaces/notification.int
 import { ChannelsService } from '../channels/channels.service';
 import { Notification } from "./../notifications/interfaces/notification.interface"
 import { ResponseData } from 'src/notifications/interfaces/responseData.interface';
+import { ChannelBase } from "./../ChannelBase.interface"
 
 @Injectable()
-export class EmailChannelService {
+export class EmailChannelService implements ChannelBase {
     constructor(private notificationsService: ChannelsService) {
 
     }
